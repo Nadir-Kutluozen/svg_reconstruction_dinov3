@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Generated Dataset Folders
+# (We ignore these so we don't accidentally push 10,000+ SVG/PNG files into the repository)
+svg_face_dataset_one_face/
+svg_face_dataset_two_face/
+svg_face_dataset/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
