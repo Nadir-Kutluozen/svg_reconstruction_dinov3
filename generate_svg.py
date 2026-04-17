@@ -134,14 +134,19 @@ def convert_svgs_to_pngs(svg_dir, png_dir):
             png_name = filename.replace(".svg", ".png")
             png_path = os.path.join(png_dir, png_name)
 
-            cairosvg.svg2png(
-                url=svg_path,
-                write_to=png_path,
-                output_width=224,
-                output_height=224
-            )
-            count += 1
-            if count % 1000 == 0:
-                print(f"Converted {count} images...")
+            # Skip conversion if PNG already exists to allow resuming
+            if not os.path.exists(png_path):
+                try:
+                    cairosvg.svg2png(
+                        url=svg_path,
+                        write_to=png_path,
+                        output_width=224,
+                        output_height=224
+                    )
+                    count += 1
+                    if count % 1000 == 0:
+                        print(f"Converted {count} new images...")
+                except Exception as e:
+                    print(f"WARNING: Skipping corrupted SVG file {filename}")
 
-    print(f"Successfully converted all {count} files!")
+    print(f"Successfully converted remaining files! New converted: {count}")
