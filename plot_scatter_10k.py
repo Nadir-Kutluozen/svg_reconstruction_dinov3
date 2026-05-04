@@ -16,7 +16,7 @@ def plot_scatter_grid(y_true, y_pred, labels, title, filename):
     cols = 5
     rows = (num_features + cols - 1) // cols
     
-    fig, axes = plt.subplots(rows, cols, figsize=(20, 3.5 * rows))
+    fig, axes = plt.subplots(rows, cols, figsize=.6 * np.array((20, 3.5 * rows)))
     axes = axes.flatten()
     
     for i, label in enumerate(labels):
@@ -31,19 +31,30 @@ def plot_scatter_grid(y_true, y_pred, labels, title, filename):
         else:
             rho, _ = pearsonr(gt, pred)
             
-        ax.scatter(gt, pred, s=5, alpha=0.5, color='cornflowerblue')
-        ax.set_title(f"{label}\n$\\rho={rho:.4f}$", fontsize=12)
-        ax.set_xlabel("Ground Truth", fontsize=10)
-        ax.set_ylabel("Predicted", fontsize=10)
+        ax.scatter(gt, pred, s=3, alpha=0.8, color='cornflowerblue')
+        ax.set_title(f"{label}")
+        # Use an 'r' before the string to prevent \r from acting as a carriage return.
+        # Add transform=ax.transAxes so 0.05 and 0.95 are treated as percentages of the plot area, not data values.
+        ax.text(0.05, 0.95, rf"$\rho={rho:.4f}$")
+        if i % cols == 0:
+            ax.set_ylabel("Predicted")
+        else:
+            ax.set_yticklabels([])
+        if i < cols*(rows-1):
+            ax.set_xticklabels([])
+        else:
+            ax.set_xlabel("Ground Truth")
         ax.grid(True, linestyle='--', alpha=0.5)
+        ax.set_xlim(-0.1, 1.1)
+        ax.set_ylim(-0.1, 1.1)
         
     # Hide any unused subplots
     for j in range(num_features, len(axes)):
         fig.delaxes(axes[j])
         
-    fig.suptitle(title, fontsize=20, y=1.02)
+    #fig.suptitle(title, fontsize=20, y=1.02)
     plt.tight_layout()
-    plt.savefig(filename, dpi=150, bbox_inches='tight')
+    plt.savefig(filename, dpi=500, bbox_inches='tight')
     print(f"Saved scatter plot grid to {filename}")
     plt.close()
 
@@ -62,7 +73,14 @@ def main():
     image_ids = ids_pre
     
     # 3. Load Target Metadata
-    y, labels = load_metadata_features(meta_dir, image_ids)
+    y = np.load("Z_10k_one_face.npy")
+    labels = [
+        "face radius", "face x position", "face y position", 
+        "eye radius", "eye spacing", "eye offset", 
+        "mouth width", "mouth offset", "mouth curve",
+        "skin H", "skin S", "skin V",
+        "eye H", "eye S", "eye V"
+    ]
     
     # 4. Train/Test Split
     X_train_pre, X_test_pre, y_train, y_test = train_test_split(X_pre, y, test_size=0.2, random_state=42)

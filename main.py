@@ -1,29 +1,55 @@
-import os
-import json
+import numpy as np
+import matplotlib.pyplot as plt
+import streamlit as st
 
-# Import the generation logic from our other file
-from generate_svg import generate_two_faces_svg, SVG_DIR, META_DIR
 
-print("Testing the SVG generation...")
 
-# Generate just a couple of examples
-num_examples = 3
-
-for i in range(num_examples):
-    sample_id = f"test_face_{i}"
+def main():
     
-    # Run the imported function
-    svg_content, meta_data = generate_two_faces_svg(sample_id)
+    # feature_matrix = np.load("Z_10k_one_face.npy")
+    
+    # # our 15 features that we need from the z matrix
+    # labels = [
+    #     "face_radius", "face_cx", " face_cy", 
+    #     "eye_radius", "eye_spacing", "eye_y_offset", 
+    #     "mouth_width", "mouth_y_offset", "mouth_curve",
+    #     "skin_h", "skin_s", "skin_v",
+    #     "eye_h", "eye_s", "eye_v"
+    # ]
+    
+    # print(f"Z matrix shape: {feature_matrix.shape}")
+    
+    # # calculate the correlation matrix of the 15 features 
+    # corr = np.corrcoef(feature_matrix, rowvar=False)
+    
+    # # plot the correlation matrix
+    # plt.figure(figsize=(10, 8))
+    # # Use coolwarm and set bounds to -1 and 1 for proper correlation colors
+    # plt.imshow(corr, cmap='coolwarm', vmin=-1, vmax=1)
+    
+    # # use dynamic length for ticks
+    # plt.yticks(np.arange(len(labels)), labels)
+    # plt.xticks(np.arange(len(labels)), labels, rotation=45)
+    # plt.colorbar(label="Pearson Correlation")
+    
+    # plt.title("Correlation Matrix of Generative Z Features", pad=20, fontsize=14)
+    # plt.tight_layout()
+    # plt.savefig("correlation_matrix.png")
+    st.title("Hello Streamlit-er 👋")
+    st.markdown(
+        """ 
+        This is a playground for you to try Streamlit and have fun. 
+    
+        **There's :rainbow[so much] you can build!**
+        
+        We prepared a few examples for you to get started. Just 
+        click on the buttons above and discover what you can do 
+        with Streamlit. 
+        """
+    )
 
-    # Save SVG
-    svg_path = os.path.join(SVG_DIR, f"{sample_id}.svg")
-    with open(svg_path, "w", encoding="utf-8") as f:
-        f.write(svg_content)
+    if st.button("Send balloons!"):
+        st.balloons()
 
-    # Save Metadata
-    meta_path = os.path.join(META_DIR, f"{sample_id}.json")
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta_data, f, indent=2)
-
-print(f"Successfully generated {num_examples} examples!")
-print(f"Check {SVG_DIR} and {META_DIR} to see them.")
+if __name__ == "__main__":
+    main()

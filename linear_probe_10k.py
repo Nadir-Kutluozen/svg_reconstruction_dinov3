@@ -18,6 +18,7 @@ def var_exp(y, y_):
 def main():
     parser = argparse.ArgumentParser(description="Linear Probe on DINOv3 Features")
     parser.add_argument("--reverse", action="store_true", help="Run in Reverse R^2 mode (predict activations from features)")
+    parser.add_argument("--test", type=str, default="iid", choices=["iid", "compgen", "extrapolate"], help="Test split mode: iid, compgen, extrapolate")
     args = parser.parse_args()
 
     png_dir = "svg_face_dataset_one_face/pngs"
@@ -35,10 +36,21 @@ def main():
     assert ids_pre == ids_rand, "Mismatch in image IDs between pretrained and random models!"
     image_ids = ids_pre
     
-    # 3. Load Target Metadata
-    y, labels = load_metadata_features(meta_dir, image_ids)
-    
-    print(f"X_pre shape: {X_pre.shape}, y shape: {y.shape}")
+    # 3. Load Target Metadata (Using our pure Z matrix instead of JSONs!)
+    y = np.load("Z_10k_one_face.npy")
+    labels = [
+        "face_radius", "face_cx", "face_cy", 
+        "eye_radius", "eye_spacing", "eye_y_offset", 
+        "mouth_width", "mouth_y_offset", "mouth_curve",
+        "skin_h", "skin_s", "skin_v",
+        "eye_h", "eye_s", "eye_v"
+    ]
+ 
+    # y, labels = load_metadata_features(meta_dir, image_ids)
+    # print(f"X_pre shape: {X_pre.shape}, y shape: {y.shape}")
+
+    # if args.cube:
+    #     y = y ** 3
     
     # 4. Train/Test Split & Fit
     if args.reverse:
@@ -52,6 +64,7 @@ def main():
         probe_pre = Ridge(alpha=1.0)
         probe_pre.fit(X_train, y_train_pre)
         preds_pre = probe_pre.predict(X_test)
+        probe_pred.score(X_test, y_test_pre)
         r2_pre = var_exp(y_test_pre, preds_pre)
         
         # Fit Ridge Probe for Random
@@ -60,12 +73,30 @@ def main():
         probe_rand.fit(X_train, y_train_rand)
         preds_rand = probe_rand.predict(X_test)
         r2_rand = var_exp(y_test_rand, preds_rand)
+
+        #TODO show raw data, 768 avt for random and 768 pred one, see if they overlap
+        # TODO check for distrib
         
     else:
+        # we want to do all of it 
         print("Running Standard R^2: Predicting Features from Activations.")
-        X_train_pre, X_test_pre, y_train, y_test = train_test_split(X_pre, y, test_size=0.2, random_state=SEED)
-        X_train_rand, X_test_rand, _, _ = train_test_split(X_rand, y, test_size=0.2, random_state=SEED)
-        
+        ind_use = np.array((0, 1, 2, 9, 10, 11))
+        if args.test == 'iid':
+            X_train_pre, X_test_pre, y_train, y_test = train_test_split(X_pre, y, test_size=0.2, random_state=SEED)
+            X_train_rand, X_test_rand, _, _ = train_test_split(X_rand, y, test_size=0.2, random_state=SEED)
+        elif args.test == 'compgen':
+            ind_test = (y[:, 3:5] > 0.5).all(axis=1)
+            ind_train = ~ind_test
+            X_train_pre, X_test_pre, y_train, y_test = X_pre[ind_train], X_pre[ind_test], y[ind_train], y[ind_test]
+            X_train_rand, X_test_rand, _, _ = X_rand[ind_train], X_rand[ind_test], y[ind_train], y[ind_test]
+        elif args.test == 'extrapolate':
+            ind_train = y[:, 3] < 0.5
+            ind_test = ~ind_train
+            X_train_pre, X_test_pre, y_train, y_test = X_pre[ind_train], X_pre[ind_test], y[ind_train], y[ind_test]
+            X_train_rand, X_test_rand, _, _ = X_rand[ind_train], X_rand[ind_test], y[ind_train], y[ind_test]
+        else:
+            raise ValueError("Invalid test mode. Use 'iid', 'compgen', or 'extrapolate'.")
+
         # Fit Ridge Probe for Pretrained
         print("Fitting Ridge Probe for Pretrained DINOv3...")
         probe_pre = Ridge(alpha=1.0)
@@ -107,7 +138,7 @@ def main():
         plt.tight_layout()
         
         # Save the plot
-        plot_filename = "variance_explained_comparison.png"
+        plot_filename = f"variance_explained_comparison_{args.test}.png"
         plt.savefig(plot_filename, dpi=300)
         print(f"\nPlot saved successfully to {plot_filename}!")
 
@@ -118,8 +149,9 @@ def main():
         plt.xlabel("Random DINOv3 R^2")
         plt.ylabel("Pretrained DINOv3 R^2")
         plt.title("Reverse R^2: Random vs Pretrained DINOv3")
-        plt.savefig("random_vs_pretrained_comparison.png", dpi=300)
-        print(f"\nPlot saved successfully to random_vs_pretrained_comparison.png!")
+        plot_filename = f"random_vs_pretrained_comparison_{args.test}.png"
+        plt.savefig(plot_filename, dpi=300)
+        print(f"\nPlot saved successfully to {plot_filename}!")
 
 if __name__ == "__main__":
     main()

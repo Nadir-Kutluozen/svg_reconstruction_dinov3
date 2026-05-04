@@ -8,11 +8,7 @@ __pycache__/
 
 # Generated Dataset Folders
 # (We ignore these so we don't accidentally push 10,000+ SVG/PNG files into the repository)
-svg_face_dataset_one_face/
-svg_face_dataset_two_face/
-svg_face_dataset/
-input_pngs/
-
+data/
 
 # OS generated files
 .DS_Store
@@ -27,3 +23,5 @@ Thumbs.db
 .env
 *.png
 *.npz
+
+output_pngs/

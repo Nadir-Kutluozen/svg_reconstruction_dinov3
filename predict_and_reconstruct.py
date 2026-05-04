@@ -14,36 +14,65 @@ SEED = 42
 
 def build_svg_from_predictions(preds):
     """
-    Takes a 19-dimensional list/array of predicted features and builds an SVG string.
-    Features: [face_x, face_y, face_r, eyeL_x, eyeL_y, eyeL_r, eyeR_x, eyeR_y, eyeR_r, 
-               mouth_x, mouth_y, mouth_w, mouth_c, skin_r, skin_g, skin_b, eye_r, eye_g, eye_b]
+    Takes a 15-dimensional list/array of predicted z-values and builds an SVG string.
+    Features (0 to 1 range): face_radius, cx, cy, eye_radius, eye_spacing, eye_y_offset, 
+                             mouth_width, mouth_y_offset, mouth_curve,
+                             skin_h, skin_s, skin_v, eye_h, eye_s, eye_v
     """
-    cx, cy, r = preds[0], preds[1], preds[2]
-    ex1, ey1, er1 = preds[3], preds[4], preds[5]
-    ex2, ey2, er2 = preds[6], preds[7], preds[8]
-    mx, my, mw, mc = preds[9], preds[10], preds[11], preds[12]
+    import colorsys
+    # Clip predictions to roughly [0, 1] range to avoid extreme deformations
+    z = np.clip(preds, 0.0, 1.0)
     
-    # Clip RGB values between 0 and 1, then convert to 0-255 Hex
-    sr, sg, sb = np.clip(preds[13], 0, 1), np.clip(preds[14], 0, 1), np.clip(preds[15], 0, 1)
-    skin_hex = '#{:02x}{:02x}{:02x}'.format(int(sr*255), int(sg*255), int(sb*255))
+    # Decode geometry
+    start, end = 55, 75
+    face_radius = start + z[0] * (end - start)
     
-    er, eg, eb = np.clip(preds[16], 0, 1), np.clip(preds[17], 0, 1), np.clip(preds[18], 0, 1)
-    eye_hex = '#{:02x}{:02x}{:02x}'.format(int(er*255), int(eg*255), int(eb*255))
+    start, end = face_radius + 10, CANVAS_W - face_radius - 10
+    cx = start + z[1] * (end - start)
     
-    # Ensure dimensions aren't breaking (e.g. negative radius)
-    r = max(1.0, r)
-    er1 = max(0.5, er1)
-    er2 = max(0.5, er2)
-    mw = max(1.0, mw)
+    start, end = face_radius + 10, CANVAS_H - face_radius - 10
+    cy = start + z[2] * (end - start)
+
+    start, end = 4, 10
+    eye_radius = start + z[3] * (end - start)
     
-    mouth_path = make_mouth_path(mx, my, mw, mc)
+    start, end = 15, 30
+    eye_spacing = start + z[4] * (end - start)
+    
+    start, end = 10, 25
+    eye_y_offset = start + z[5] * (end - start)
+
+    start, end = 25, 50
+    mouth_width = start + z[6] * (end - start)
+    
+    start, end = 15, 30
+    mouth_y_offset = start + z[7] * (end - start)
+
+    start, end = -20, 20
+    mouth_curve = start + z[8] * (end - start)
+
+    left_eye_cx, left_eye_cy = cx - eye_spacing, cy - eye_y_offset
+    right_eye_cx, right_eye_cy = cx + eye_spacing, cy - eye_y_offset
+    mouth_cx, mouth_cy = cx, cy + mouth_y_offset
+
+    # Decode colors
+    def get_hex(h, s_z, v_z):
+        s = 0.5 + s_z * 0.5
+        v = 0.5 + v_z * 0.5
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        return '#{:02x}{:02x}{:02x}'.format(int(r*255), int(g*255), int(b*255))
+
+    skin_hex = get_hex(z[9], z[10], z[11])
+    eye_hex = get_hex(z[12], z[13], z[14])
+    
+    mouth_path = make_mouth_path(mouth_cx, mouth_cy, mouth_width, mouth_curve)
     
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{CANVAS_W}" height="{CANVAS_H}" viewBox="0 0 {CANVAS_W} {CANVAS_H}">
   <rect width="100%" height="100%" fill="white" />
   <g>
-    <circle cx="{cx:.2f}" cy="{cy:.2f}" r="{r:.2f}" fill="{skin_hex}" stroke="#111111" stroke-width="2" />
-    <circle cx="{ex1:.2f}" cy="{ey1:.2f}" r="{er1:.2f}" fill="{eye_hex}" />
-    <circle cx="{ex2:.2f}" cy="{ey2:.2f}" r="{er2:.2f}" fill="{eye_hex}" />
+    <circle cx="{cx:.2f}" cy="{cy:.2f}" r="{face_radius:.2f}" fill="{skin_hex}" stroke="#111111" stroke-width="2" />
+    <circle cx="{left_eye_cx:.2f}" cy="{left_eye_cy:.2f}" r="{eye_radius:.2f}" fill="{eye_hex}" />
+    <circle cx="{right_eye_cx:.2f}" cy="{right_eye_cy:.2f}" r="{eye_radius:.2f}" fill="{eye_hex}" />
     <path d="{mouth_path}" fill="none" stroke="#111111" stroke-width="3" stroke-linecap="round" />
   </g>
 </svg>'''
@@ -80,12 +109,20 @@ def plot_reconstruction_grid(image_ids, source_dir, predicted_features, output_f
         predicted_pil = render_svg_to_pil(predicted_svg_str)
         
         axes[i, 0].imshow(orig_pil)
-        axes[i, 0].set_title(f"Original: {img_id}")
-        axes[i, 0].axis('off')
+        # Hide ticks but keep the border box
+        axes[i, 0].set_xticks([])
+        axes[i, 0].set_yticks([])
+        for spine in axes[i, 0].spines.values():
+            spine.set_edgecolor('black')
+            spine.set_linewidth(2)
         
         axes[i, 1].imshow(predicted_pil)
-        axes[i, 1].set_title(f"{title_prefix} Reconstructed")
-        axes[i, 1].axis('off')
+        # Hide ticks but keep the border box
+        axes[i, 1].set_xticks([])
+        axes[i, 1].set_yticks([])
+        for spine in axes[i, 1].spines.values():
+            spine.set_edgecolor('black')
+            spine.set_linewidth(2)
         
     plt.tight_layout()
     plt.savefig(output_filename, dpi=200)
@@ -144,7 +181,7 @@ def main():
     print("Loading 10k dataset to train linear probe...")
     ids_pre, X_layers_pre = load_dino_features("dino_pretrained_10k.npz")
     X_pre = X_layers_pre[:, -1, :]
-    y, labels = load_metadata_features("svg_face_dataset_one_face/meta", ids_pre)
+    y = np.load("Z_10k_one_face.npy")
     
     # Split into 80% Train, 20% Test. (Grab the labels to guarantee test samples are completely unseen)
     X_train, X_test, y_train, y_test, ids_train, ids_test = train_test_split(
