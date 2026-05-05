@@ -1,55 +1,66 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import streamlit as st
-
-
+import argparse
+import sys
 
 def main():
-    
-    # feature_matrix = np.load("Z_10k_one_face.npy")
-    
-    # # our 15 features that we need from the z matrix
-    # labels = [
-    #     "face_radius", "face_cx", " face_cy", 
-    #     "eye_radius", "eye_spacing", "eye_y_offset", 
-    #     "mouth_width", "mouth_y_offset", "mouth_curve",
-    #     "skin_h", "skin_s", "skin_v",
-    #     "eye_h", "eye_s", "eye_v"
-    # ]
-    
-    # print(f"Z matrix shape: {feature_matrix.shape}")
-    
-    # # calculate the correlation matrix of the 15 features 
-    # corr = np.corrcoef(feature_matrix, rowvar=False)
-    
-    # # plot the correlation matrix
-    # plt.figure(figsize=(10, 8))
-    # # Use coolwarm and set bounds to -1 and 1 for proper correlation colors
-    # plt.imshow(corr, cmap='coolwarm', vmin=-1, vmax=1)
-    
-    # # use dynamic length for ticks
-    # plt.yticks(np.arange(len(labels)), labels)
-    # plt.xticks(np.arange(len(labels)), labels, rotation=45)
-    # plt.colorbar(label="Pearson Correlation")
-    
-    # plt.title("Correlation Matrix of Generative Z Features", pad=20, fontsize=14)
-    # plt.tight_layout()
-    # plt.savefig("correlation_matrix.png")
-    st.title("Hello Streamlit-er 👋")
-    st.markdown(
-        """ 
-        This is a playground for you to try Streamlit and have fun. 
-    
-        **There's :rainbow[so much] you can build!**
-        
-        We prepared a few examples for you to get started. Just 
-        click on the buttons above and discover what you can do 
-        with Streamlit. 
-        """
-    )
+    parser = argparse.ArgumentParser(description="DINOv3 SVG Linear Probing Pipeline")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    if st.button("Send balloons!"):
-        st.balloons()
+    # 1. Generate Dataset
+    parser_gen = subparsers.add_parser("generate", help="Generate SVG dataset")
+    parser_gen.add_argument("--faces", type=int, choices=[1, 2], default=1, help="Number of faces")
+    parser_gen.add_argument("--samples", type=int, default=10000, help="Number of samples")
+    parser_gen.add_argument("--convert", action="store_true", help="Convert SVG to PNG")
+
+    # 2. Extract Features
+    parser_ext = subparsers.add_parser("extract", help="Extract DINOv3 features")
+    parser_ext.add_argument("--faces", type=int, choices=[1, 2], default=1)
+
+    # 3. Probe Experiments
+    parser_probe = subparsers.add_parser("probe", help="Run linear probing experiments")
+    parser_probe.add_argument("--experiment", type=str, choices=["standard", "scatter", "reconstruct", "3d", "generalization", "correlation", "all_layers", "summary"], required=True)
+    parser_probe.add_argument("--faces", type=int, choices=[1, 2], default=1)
+
+    args = parser.parse_args()
+
+    if args.command == "generate":
+        from src.dataset.generator import build_dataset
+        from src.dataset.utils import convert_svgs_to_pngs
+        from src.config import DATA_DIR, ONE_FACE_DIR, TWO_FACES_DIR
+        import os
+        
+        build_dataset(num_faces=args.faces, n_total=args.samples, out_dir=DATA_DIR)
+        if args.convert:
+            base_dir = ONE_FACE_DIR if args.faces == 1 else TWO_FACES_DIR
+            convert_svgs_to_pngs(os.path.join(base_dir, "svgs"), os.path.join(base_dir, "pngs"))
+
+    elif args.command == "extract":
+        import subprocess
+        # Simply call the extractor module since it's cleaner to handle imports
+        cmd = [sys.executable, "src/features/extractor.py", "--faces", str(args.faces)]
+        subprocess.run(cmd)
+
+    elif args.command == "probe":
+        import src.probing.experiments as exp
+        
+        if args.experiment == "standard":
+            exp.run_standard_probe(args.faces)
+        elif args.experiment == "scatter":
+            exp.run_scatter(args.faces)
+        elif args.experiment == "reconstruct":
+            if args.faces == 2:
+                print("Reconstruction is currently optimized for 1 face only.")
+            else:
+                exp.run_reconstruct()
+        elif args.experiment == "3d":
+            exp.run_3d_surface(args.faces)
+        elif args.experiment == "generalization":
+            exp.run_generalization()
+        elif args.experiment == "correlation":
+            exp.run_correlation(args.faces)
+        elif args.experiment == "all_layers":
+            exp.run_all_layers(args.faces)
+        elif args.experiment == "summary":
+            exp.run_summary(args.faces)
 
 if __name__ == "__main__":
     main()

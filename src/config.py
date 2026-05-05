@@ -7,6 +7,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Define the central data directory
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
+# Define the central output directory for plots
+OUTPUT_DIR = os.path.join(BASE_DIR, "output_pngs")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 # Specific data paths
 ONE_FACE_DIR = os.path.join(DATA_DIR, "svg_face_dataset_one_face")
 TWO_FACES_DIR = os.path.join(DATA_DIR, "svg_face_dataset_two_faces")

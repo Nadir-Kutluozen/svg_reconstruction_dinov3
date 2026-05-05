@@ -1,0 +1,19 @@
+# Deep Learning & Vision Models
+torch
+torchvision
+transformers
+
+# Math & Data Processing
+numpy
+scikit-learn
+scipy
+
+# Image Processing & Graphics
+cairosvg
+Pillow
+
+# Visualization & Plotting
+matplotlib
+
+# Utilities
+tqdm

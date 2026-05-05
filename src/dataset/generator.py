@@ -95,12 +95,15 @@ def generate_face_svg_group(z, face_id, face_type="one_face"):
 def build_dataset(num_faces=1, n_total=10000, out_dir=DATA_DIR):
     np.random.seed(SEED)
     
+    # Ensure the main output directory exists
+    os.makedirs(out_dir, exist_ok=True)
+    
     if num_faces == 1:
-        base_dir = ONE_FACE_DIR
+        base_dir = os.path.join(out_dir, "svg_face_dataset_one_face")
         z_filename = "Z_10k_one_face.npy"
         z_dim = 15
     else:
-        base_dir = TWO_FACES_DIR
+        base_dir = os.path.join(out_dir, "svg_face_dataset_two_faces")
         z_filename = "Z_10k_two_faces.npy"
         z_dim = 30
         
@@ -189,5 +192,5 @@ if __name__ == "__main__":
     build_dataset(num_faces=args.faces, n_total=args.samples, out_dir=args.out_dir)
     
     if args.convert:
-        base_dir = ONE_FACE_DIR if args.faces == 1 else TWO_FACES_DIR
+        base_dir = os.path.join(args.out_dir, f"svg_face_dataset_{'one_face' if args.faces == 1 else 'two_faces'}")
         convert_svgs_to_pngs(os.path.join(base_dir, "svgs"), os.path.join(base_dir, "pngs"))
