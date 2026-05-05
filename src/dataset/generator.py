@@ -177,9 +177,55 @@ def build_dataset(num_faces=1, n_total=10000, out_dir=DATA_DIR):
             
     np.save(os.path.join(out_dir, z_filename), Z)
     print(f"Success! Dataset generated and {z_filename} saved.")
+
+def square_pad_svg(svg_str, vb_w=600, vb_h=420):
+    """Pad an SVG with a vb_w x vb_h viewBox to a square (vb_w x vb_w) viewBox."""
+    pad = (vb_w - vb_h) // 2  # 90
+    new_h = vb_w               # 600 (square)
+    svg_str = svg_str.replace(
+        f'viewBox="0 0 {vb_w} {vb_h}"',
+        f'viewBox="0 {-pad} {vb_w} {new_h}"',
+    )
+    svg_str = svg_str.replace(
+        f'width="{vb_w}" height="{vb_h}"',
+        f'width="{new_h}" height="{new_h}"',
+    )
+    return svg_str
+
+def build_scene_dataset(theme="island", n_total=10000, out_dir=DATA_DIR):
+    import src.dataset.svg_island as svg_island
+    import src.dataset.svg_western as svg_western
+    theme_module = svg_island if theme == "island" else svg_western
     
-    # We will skip automatic conversion here to let the user control it if they want
-    # convert_svgs_to_pngs(svg_dir, png_dir)
+    base_dir = os.path.join(out_dir, f"scene_{theme}")
+    svg_dir = os.path.join(base_dir, "svgs")
+    os.makedirs(svg_dir, exist_ok=True)
+    
+    z_path = os.path.join(out_dir, "Z_10k_scene.npy")
+    if os.path.exists(z_path):
+        Z = np.load(z_path)
+        if Z.shape[0] < n_total:
+            # Need a new one if it's too small
+            rng = np.random.default_rng(SEED)
+            Z = rng.uniform(0, 1, (n_total, 32)).astype(np.float32)
+            np.save(z_path, Z)
+    else:
+        rng = np.random.default_rng(SEED)
+        Z = rng.uniform(0, 1, (n_total, 32)).astype(np.float32)
+        np.save(z_path, Z)
+        
+    print(f"Generating {n_total} SVGs for scene '{theme}' in {base_dir}...")
+    for i in range(n_total):
+        sid = f"{theme}_{i:05d}"
+        svg_str = theme_module.generate_scene_svg(Z[i])
+        svg_str = square_pad_svg(svg_str)
+        with open(os.path.join(svg_dir, f"{sid}.svg"), "w", encoding="utf-8") as f:
+            f.write(svg_str)
+            
+        if (i + 1) % 1000 == 0:
+            print(f"Processed {i + 1}/{n_total} scenes...")
+            
+    print(f"Success! {theme} scene generated.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate SVG Face Dataset")
