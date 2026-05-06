@@ -105,15 +105,15 @@ These commands execute on the datasets generated via `--faces 1` or `--faces 2`.
   `python main.py probe --experiment correlation --faces 1`
   *(Generates `correlation_matrix.png`)*
 
-* **Fig 1: Face Latents 3D Cube (David's Format):**
+* **Fig 1: Face Latents 3D Cube:**
   `python main.py probe --experiment face_fig1`
   *(Generates `fig1_face_latents.png`)*
 
-* **Fig 4a: Nonlinear Representation Plane (David's Format):**
+* **Fig 4a: Nonlinear Representation Plane:**
   `python main.py probe --experiment face_fig4a`
   *(Generates `fig4a_reverse.png`)*
 
-* **Fig 9: Out-of-Distribution Generalization (David's Format):**
+* **Fig 9: Out-of-Distribution Generalization:**
   `python main.py probe --experiment face_ood_fig`
   *(Generates `fig_ood_cross_domain.png`)*
 
