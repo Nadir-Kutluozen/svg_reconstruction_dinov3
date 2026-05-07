@@ -4,18 +4,6 @@ __pycache__/
 *$py.class
 *.so
 
-# Jupyter Notebooks
-.ipynb_checkpoints/
-*.ipynb
-
-# Generated Dataset Folders
-data/
-david/
-output_pngs/
-output_pngs_old/
-sw_test/
-scene_world/
-
 # Raw Data Files
 *.png
 *.pdf
